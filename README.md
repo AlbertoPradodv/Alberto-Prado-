@@ -1,3 +1,3 @@
 # Alberto-Prado-
 
-Personal Project Repository from professional and academic jobs 
+Personal Project Repository with professional and academic jobs 
