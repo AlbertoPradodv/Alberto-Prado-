@@ -1,0 +1,143 @@
+WITH 
+
+--CONTADOR LISTAS DE RESET
+     listas_resets AS
+(SELECT 
+        parse_date('%Y%m%d', _TABLE_SUFFIX) AS data_lista_reset,
+        globoid,
+        Tipo_de_conta
+    FROM `globoplay-dados.fraude.Lista_reset_*`
+),
+
+Qtd_vezes_presntes_ListaReset AS (
+    SELECT globoid,
+        COUNT(DISTINCT data_lista_reset) AS Qtd_vezes_presntes_ListaReset
+    FROM listas_resets 
+    group by globoid
+
+),
+
+--CONTADOR LISTAS DE CANCELAMENTO
+listas_Cancelamento AS (
+    SELECT 
+        parse_date('%Y%m%d', _TABLE_SUFFIX) AS data_lista_cancel,
+        globoid,
+        Tipo_de_conta
+    FROM `globoplay-dados.fraude.Lista_cancelamento_*`
+),
+
+Qtd_vezes_presntes_ListaCancelamento AS (
+    SELECT globoid,
+        COUNT(DISTINCT data_lista_cancel) AS qtd_vezes_presntes_ListaCancelamento,
+    FROM listas_Cancelamento 
+    group by globoid
+
+),
+
+--CONTADOR LISTAS DE COMPARTILHADOR
+ lista_compartilhador AS
+(SELECT 
+        parse_date('%Y%m%d', _TABLE_SUFFIX) AS data_lista_compartilhador,
+        globoid,
+        Tipo_conta
+    FROM `globoplay-dados.fraude.Lista_compartilhadores_*`
+),
+Qtd_vezes_presntes_Lista_compartilhador AS (
+    SELECT globoid,
+        COUNT(DISTINCT data_lista_compartilhador) AS Qtd_vezes_presntes_Lista_compartilhador,
+    FROM lista_compartilhador 
+    group by globoid
+
+),
+
+--ultima data da lista de cancelamento
+ data_ultima_lista_cancelamento AS (
+SELECT globoid,
+MAX(parse_date('%Y%m%d', _TABLE_SUFFIX) ) as data_ultima_lista_cancelamento
+ FROM `globoplay-dados.fraude.Lista_cancelamento_*`
+group by globoid
+
+ ),
+
+METRICAS_LATEST AS (
+SELECT A.globoid,
+        --datas consumo maxima
+        MAX (DATE(B.data_consumo)) AS data_consumo_max,
+        --media  mais alto entre titulares 
+        ROUND(avg(B.playtime),4) as playtime_media,
+        --media  mais alto entre dependentes
+        ROUND(avg(B.playtime_dep), 4) as playtime_dep_media,
+        --max mais alto entre titulares
+        ROUND(MAX(B.playtime), 4) as playtime_max,
+        --max mais alto entre dependentes
+        ROUND(MAX(B.playtime_dep), 4) as playtime_dep_max,
+        --media  mais alto entre titulares
+        ROUND(avg(B.max_sessoes_sim), 4)  as max_sessoes_sim_media,
+        --media  mais alto entre dependentes
+        ROUND(avg(B.max_sessoes_sim_dep), 4)  as max_sessoes_sim_dep_media,
+        --max mais alto entre titulares 
+        MAX (B.max_sessoes_sim) as max_sessoes_sim_max,
+        --max mais alto entre dependentes 
+        MAX (B.max_sessoes_sim_dep) as max_sessoes_sim_dep_max,
+        --media  mais alto entre titulares e dependentes
+        ROUND(avg(B.soma_minutos_simultaneos), 4) as soma_minutos_simultaneos_media,
+        --media  mais alto entre dependentes
+        ROUND(avg(B.soma_minutos_simultaneos_dep), 4) as soma_minutos_simultaneos_dep_media,
+        --max mais alto entre titulares
+        ROUND(MAX(B.soma_minutos_simultaneos), 4) as soma_minutos_simultaneos_max,
+        --max mais alto entre dependentes
+        ROUND(MAX(B.soma_minutos_simultaneos_dep), 4) as soma_minutos_simultaneos_dep_max,
+        --media  mais alto entre titulares 
+        ROUND(avg(B.qtd_cidade_consumo), 4) as qtd_cidade_consumo_media,
+        --media  mais alto entre dependentes
+        ROUND(avg(B.qtd_cidade_consumo_com_dep), 4) as qtd_cidade_consumo_com_dep_media,
+        --max mais alto entre titulares
+        MAX (B.qtd_cidade_consumo) as qtd_cidade_consumo_max,
+        --max  mais alto entre dependentes
+        MAX (B.qtd_cidade_consumo_com_dep) as qtd_cidade_consumo_com_dep_max,
+        --media  mais alto entre titulares 
+        ROUND(avg(B.qtd_cidades_simul), 4) as qtd_cidades_simul_media,
+        --media  mais alto entre dependentes 
+        ROUND(avg(B.qtd_cidades_simul_dep), 4) as qtd_cidades_simul_dep_media,
+       --max mais alto entre titulares
+        MAX (B.qtd_cidades_simul) as qtd_cidades_simul_max,
+        --max mais alto entre dependentes
+        MAX (B.qtd_cidades_simul_dep) as qtd_cidades_simul_dep_max,
+       --media  mais alto entre titulares 
+        ROUND(avg(B.ips), 4) as ips_media,
+        --media  mais alto entre dependentes
+        ROUND(avg(B.ips_dep), 4) as ips_dep_media,
+       --max mais alto entre titulares e dependentes
+        MAX (B.ips) as ips_max,
+       --max mais alto entre titulares e dependentes
+        MAX (B.ips_dep) as ips_dep_max
+
+FROM `globoplay-dados.fraude.analise_fraude_entrantes` A 
+LEFT JOIN `globoplay-dados.fraude.consumo_antifraude_diario_*` B 
+ON A.globoid = B.globoid
+AND B.data_consumo BETWEEN '2021-12-16' AND DATE_SUB(CURRENT_DATE('America/Sao_Paulo'), INTERVAL 1 DAY)
+GROUP BY A.globoid
+),
+
+METRICAS_COM_CONTADORES AS ( 
+
+SELECT A.*,
+       B.Qtd_vezes_presntes_ListaReset,
+       C.qtd_vezes_presntes_ListaCancelamento,
+       D.Qtd_vezes_presntes_Lista_compartilhador,
+       E.data_ultima_lista_cancelamento
+FROM METRICAS_LATEST A
+LEFT JOIN Qtd_vezes_presntes_ListaReset B
+ON A.globoid = B.globoid
+LEFT JOIN Qtd_vezes_presntes_ListaCancelamento C
+ON A.globoid = C.globoid
+LEFT JOIN Qtd_vezes_presntes_Lista_compartilhador D
+ON A.globoid = D.globoid
+LEFT JOIN data_ultima_lista_cancelamento E
+ON A.globoid = E.globoid
+
+)
+
+SELECT * FROM METRICAS_COM_CONTADORES
+
+

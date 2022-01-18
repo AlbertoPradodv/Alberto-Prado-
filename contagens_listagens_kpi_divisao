@@ -1,0 +1,145 @@
+--contagem cancelados com kpi base ativa
+
+WITH
+listas_base_ativa AS (
+    SELECT distinct
+        parse_date('%Y%m%d', _TABLE_SUFFIX) AS data_base_ativa,
+         globo_id
+FROM `inteligencia-globo-com.estudo_salesforce.base_ativa_*` 
+WHERE _TABLE_SUFFIX <> "jump"
+),
+
+Qtd_vezes_presntes_base_ativa AS (
+    SELECT data_base_ativa,
+        COUNT( globo_id) as total_base_ativa
+    FROM listas_base_ativa 
+    group by data_base_ativa
+
+),
+
+listas_Cancelamento AS (
+    SELECT 
+        parse_date('%Y%m%d', _TABLE_SUFFIX) AS data_lista_cancel,
+        globoid
+    FROM `globoplay-dados.fraude.Lista_cancelamento_*`
+),
+
+Qtd_vezes_presntes_ListaCancelamento AS (
+    SELECT data_lista_cancel,
+        COUNT( globoid) AS total_cancel
+    FROM listas_Cancelamento 
+    group by data_lista_cancel
+
+),
+
+calculo_kpi_cancel as (
+SELECT A.data_lista_cancel,
+       A.total_cancel, 
+       B.total_base_ativa,
+      CAST( A.total_cancel/B.total_base_ativa AS NUMERIC) as kpi
+FROM Qtd_vezes_presntes_ListaCancelamento A
+INNER JOIN Qtd_vezes_presntes_base_ativa B
+ON A.data_lista_cancel = B.data_base_ativa
+)
+
+SELECT * FROM calculo_kpi_cancel
+
+
+
+
+
+-- contagem reset com kpi base ativa
+WITH
+listas_base_ativa AS (
+    SELECT distinct
+        parse_date('%Y%m%d', _TABLE_SUFFIX) AS data_base_ativa,
+         globo_id
+FROM `inteligencia-globo-com.estudo_salesforce.base_ativa_*` 
+WHERE _TABLE_SUFFIX <> "jump"
+),
+
+Qtd_vezes_presntes_base_ativa AS (
+    SELECT data_base_ativa,
+        COUNT( globo_id) as total_base_ativa
+    FROM listas_base_ativa 
+    group by data_base_ativa
+
+),
+
+listas_reset AS (
+    SELECT 
+        parse_date('%Y%m%d', _TABLE_SUFFIX) AS data_lista_reset,
+        globoid 
+    FROM `globoplay-dados.fraude.Lista_reset_*`
+),
+
+Qtd_vezes_presntes_listas_reset AS (
+    SELECT data_lista_reset,
+        COUNT( globoid) as total_resets
+    FROM listas_reset 
+    group by data_lista_reset
+
+),
+
+calculo_kpi_reset as (
+SELECT A.data_lista_reset,
+       A.total_resets, 
+       B.total_base_ativa,
+      CAST( A.total_resets/B.total_base_ativa AS NUMERIC) as kpi
+FROM Qtd_vezes_presntes_listas_reset A
+INNER JOIN Qtd_vezes_presntes_base_ativa B
+ON A.data_lista_reset = B.data_base_ativa
+)
+
+SELECT * FROM calculo_kpi_reset
+
+
+
+
+
+
+--contagem compartilhador com kpi base ativa
+WITH
+listas_base_ativa AS (
+    SELECT distinct
+        parse_date('%Y%m%d', _TABLE_SUFFIX) AS data_base_ativa,
+         globo_id
+FROM `inteligencia-globo-com.estudo_salesforce.base_ativa_*` 
+WHERE _TABLE_SUFFIX <> "jump"
+),
+
+Qtd_vezes_presntes_base_ativa AS (
+    SELECT data_base_ativa,
+        COUNT( globo_id) as total_base_ativa
+    FROM listas_base_ativa 
+    group by data_base_ativa
+
+),
+
+listas_compartilhador AS (
+    SELECT 
+        parse_date('%Y%m%d', _TABLE_SUFFIX) AS data_Lista_compartilhador,
+        globoid
+    FROM `globoplay-dados.fraude.Lista_compartilhadores_*`
+),
+
+Qtd_vezes_presntes_listas_compartilhador  AS (
+    SELECT data_Lista_compartilhador,
+        COUNT( globoid) as total_compartilhadores
+    FROM listas_compartilhador 
+    group by data_Lista_compartilhador
+
+),
+
+calculo_kpi_compartilhador as (
+SELECT A.data_Lista_compartilhador,
+       A.total_compartilhadores, 
+       B.total_base_ativa,
+      CAST( A.total_compartilhadores / B.total_base_ativa AS NUMERIC) as kpi
+FROM Qtd_vezes_presntes_listas_compartilhador A
+INNER JOIN Qtd_vezes_presntes_base_ativa B
+ON A.data_Lista_compartilhador = B.data_base_ativa
+
+)
+
+SELECT * FROM calculo_kpi_compartilhador

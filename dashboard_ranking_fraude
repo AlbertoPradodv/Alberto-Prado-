@@ -1,0 +1,373 @@
+ --metricas 
+
+--CONTADOR LISTAS DE RESET
+
+WITH 
+
+listas_resets AS
+(SELECT 
+        parse_date('%Y%m%d', _TABLE_SUFFIX) AS data_lista_reset,
+        globoid,
+        Tipo_de_conta
+    FROM `globoplay-dados.fraude.Lista_reset_*`
+),
+
+Qtd_vezes_presntes_ListaReset AS (
+    SELECT globoid,
+        COUNT(DISTINCT data_lista_reset) AS Qtd_vezes_presntes_ListaReset
+    FROM listas_resets 
+    group by globoid
+
+),
+
+--CONTADOR LISTAS DE CANCELAMENTO
+
+listas_Cancelamento AS (
+    SELECT 
+        parse_date('%Y%m%d', _TABLE_SUFFIX) AS data_lista_cancel,
+        globoid,
+        Tipo_de_conta
+    FROM `globoplay-dados.fraude.Lista_cancelamento_*`
+),
+
+Qtd_vezes_presntes_ListaCancelamento AS (
+    SELECT globoid,
+        COUNT(DISTINCT data_lista_cancel) AS qtd_vezes_presntes_ListaCancelamento,
+    FROM listas_Cancelamento 
+    group by globoid
+
+),
+
+--CONTADOR LISTAS DE COMPARTILHADOR
+
+ lista_compartilhador AS
+(SELECT 
+        parse_date('%Y%m%d', _TABLE_SUFFIX) AS data_lista_compartilhador,
+        globoid,
+        Tipo_conta
+    FROM `globoplay-dados.fraude.Lista_compartilhadores_*`
+),
+Qtd_vezes_presntes_Lista_compartilhador AS (
+    SELECT globoid,
+        COUNT(DISTINCT data_lista_compartilhador) AS Qtd_vezes_presntes_Lista_compartilhador,
+    FROM lista_compartilhador 
+    group by globoid
+
+),
+
+METRICAS_RANK AS (
+
+SELECT A.globoid,
+         --max mais alto entre titulares
+        MAX(B.rank_titular) AS rank_max
+FROM `globoplay-dados.fraude.consumo_antifraude_diario_*` A 
+LEFT JOIN `globoplay-dados.fraude.segmentacao_usuarios_antifraude_v2` B
+ON A.globoid = B.globoid
+GROUP BY A.globoid
+
+
+),
+
+METRICAS_DATA_CONSUMO AS (
+
+SELECT  A.globoid,
+        A.rank_max,
+        B.data_consumo
+FROM METRICAS_RANK A 
+LEFT JOIN `globoplay-dados.fraude.segmentacao_usuarios_antifraude_v2`  B
+ON A.globoid = B.globoid
+AND A.rank_max = B.rank_titular
+
+),
+
+
+
+METRICAS_TOTAL AS (
+
+SELECT A.*,
+        B.playtime,
+        B.devices,
+        B.video_start, 
+        B.max_sessoes_sim,
+        B.soma_minutos_simultaneos,
+        B.qtd_cidade_consumo,
+        B.flag_cidade_simul,
+        B.qtd_cidade_consumo_tv,
+        B.qtd_cidades_simul,
+        B.qtd_videos_repetidos,
+        B.ips,
+        C.canal_de_compra
+
+FROM METRICAS_DATA_CONSUMO A  
+LEFT JOIN `globoplay-dados.fraude.consumo_antifraude_diario_*` B
+ON A.globoid = B.globoid
+AND DATE(A.data_consumo) = DATE(B.data_consumo)
+LEFT JOIN  `inteligencia-globo-com.estudo_salesforce.base_ativa_*` C
+ON A.globoid = C.globo_id
+
+),
+
+METRICAS_COM_CONTADORES AS ( 
+SELECT A.*,
+       B.Qtd_vezes_presntes_ListaReset,
+       C.qtd_vezes_presntes_ListaCancelamento,
+       D.Qtd_vezes_presntes_Lista_compartilhador,
+FROM METRICAS_TOTAL A
+LEFT JOIN Qtd_vezes_presntes_ListaReset B
+ON A.globoid = B.globoid
+LEFT JOIN Qtd_vezes_presntes_ListaCancelamento C
+ON A.globoid = C.globoid
+LEFT JOIN Qtd_vezes_presntes_Lista_compartilhador D
+ON A.globoid = D.globoid
+)
+
+SELECT * FROM METRICAS_COM_CONTADORES
+
+
+
+
+
+
+
+-- metricas dependentes
+
+WITH 
+
+listas_resets AS
+(SELECT 
+        parse_date('%Y%m%d', _TABLE_SUFFIX) AS data_lista_reset,
+        globoid,
+        Tipo_de_conta
+    FROM `globoplay-dados.fraude.Lista_reset_*`
+),
+
+Qtd_vezes_presntes_ListaReset AS (
+    SELECT globoid,
+        COUNT(DISTINCT data_lista_reset) AS Qtd_vezes_presntes_ListaReset
+    FROM listas_resets 
+    group by globoid
+
+),
+
+--CONTADOR LISTAS DE CANCELAMENTO
+
+listas_Cancelamento AS (
+    SELECT 
+        parse_date('%Y%m%d', _TABLE_SUFFIX) AS data_lista_cancel,
+        globoid,
+        Tipo_de_conta
+    FROM `globoplay-dados.fraude.Lista_cancelamento_*`
+),
+
+Qtd_vezes_presntes_ListaCancelamento AS (
+    SELECT globoid,
+        COUNT(DISTINCT data_lista_cancel) AS qtd_vezes_presntes_ListaCancelamento,
+    FROM listas_Cancelamento 
+    group by globoid
+
+),
+
+--CONTADOR LISTAS DE COMPARTILHADOR
+
+ lista_compartilhador AS
+(SELECT 
+        parse_date('%Y%m%d', _TABLE_SUFFIX) AS data_lista_compartilhador,
+        globoid,
+        Tipo_conta
+    FROM `globoplay-dados.fraude.Lista_compartilhadores_*`
+),
+Qtd_vezes_presntes_Lista_compartilhador AS (
+    SELECT globoid,
+        COUNT(DISTINCT data_lista_compartilhador) AS Qtd_vezes_presntes_Lista_compartilhador,
+    FROM lista_compartilhador 
+    group by globoid
+
+),
+
+METRICAS_RANK_DEP AS (
+
+SELECT A.globoid,
+         --max mais alto entre titulares
+        MAX(B.rank_dependente) AS rank_max
+FROM `globoplay-dados.fraude.consumo_antifraude_diario_*` A 
+LEFT JOIN `globoplay-dados.fraude.segmentacao_usuarios_antifraude_v2` B
+ON A.globoid = B.globoid
+GROUP BY A.globoid
+
+
+),
+
+METRICAS_DATA_CONSUMO_DEP AS (
+
+SELECT  A.globoid,
+        A.rank_max,
+        B.data_consumo
+FROM METRICAS_RANK_DEP A 
+LEFT JOIN `globoplay-dados.fraude.segmentacao_usuarios_antifraude_v2`  B
+ON A.globoid = B.globoid
+AND A.rank_max = B.rank_dependente
+
+),
+
+
+
+METRICAS_TOTAL_DEP AS (
+
+SELECT A.*,
+        B.playtime_dep,
+        B.devices_dep,
+        B.video_start_dep, 
+        B.max_sessoes_sim_dep,
+        B.soma_minutos_simultaneos_dep,
+        B.qtd_cidade_consumo_com_dep,
+        B.flag_cidade_simul_dep,
+        B.qtd_cidade_consumo_tv_com_dep,
+        B.qtd_cidades_simul_dep,
+        B.qtd_videos_repetidos_dep,
+        B.ips_dep,
+        C.canal_de_compra
+
+FROM METRICAS_DATA_CONSUMO_DEP A  
+LEFT JOIN `globoplay-dados.fraude.consumo_antifraude_diario_*` B
+ON A.globoid = B.globoid
+AND DATE(A.data_consumo) = DATE(B.data_consumo)
+LEFT JOIN  `inteligencia-globo-com.estudo_salesforce.base_ativa_*` C
+ON A.globoid = C.globo_id
+
+),
+
+METRICAS_COM_CONTADORES_DEP AS ( 
+SELECT A.*,
+       B.Qtd_vezes_presntes_ListaReset,
+       C.qtd_vezes_presntes_ListaCancelamento,
+       D.Qtd_vezes_presntes_Lista_compartilhador,
+FROM METRICAS_TOTAL_DEP A
+LEFT JOIN Qtd_vezes_presntes_ListaReset B
+ON A.globoid = B.globoid
+LEFT JOIN Qtd_vezes_presntes_ListaCancelamento C
+ON A.globoid = C.globoid
+LEFT JOIN Qtd_vezes_presntes_Lista_compartilhador D
+ON A.globoid = D.globoid
+)
+
+SELECT * FROM METRICAS_COM_CONTADORES_DEP
+
+
+
+
+
+
+
+/*
+-- metricas dependentes
+
+WITH 
+
+listas_resets AS
+(SELECT 
+        parse_date('%Y%m%d', _TABLE_SUFFIX) AS data_lista_reset,
+        globoid,
+        Tipo_de_conta
+    FROM `globoplay-dados.fraude.Lista_reset_*`
+),
+
+Qtd_vezes_presntes_ListaReset AS (
+    SELECT globoid,
+        COUNT(DISTINCT data_lista_reset) AS Qtd_vezes_presntes_ListaReset
+    FROM listas_resets 
+    group by globoid
+
+),
+
+--CONTADOR LISTAS DE CANCELAMENTO
+
+listas_Cancelamento AS (
+    SELECT 
+        parse_date('%Y%m%d', _TABLE_SUFFIX) AS data_lista_cancel,
+        globoid,
+        Tipo_de_conta
+    FROM `globoplay-dados.fraude.Lista_cancelamento_*`
+),
+
+Qtd_vezes_presntes_ListaCancelamento AS (
+    SELECT globoid,
+        COUNT(DISTINCT data_lista_cancel) AS qtd_vezes_presntes_ListaCancelamento,
+    FROM listas_Cancelamento 
+    group by globoid
+
+),
+
+--CONTADOR LISTAS DE COMPARTILHADOR
+
+ lista_compartilhador AS
+(SELECT 
+        parse_date('%Y%m%d', _TABLE_SUFFIX) AS data_lista_compartilhador,
+        globoid,
+        Tipo_conta
+    FROM `globoplay-dados.fraude.Lista_compartilhadores_*`
+),
+Qtd_vezes_presntes_Lista_compartilhador AS (
+    SELECT globoid,
+        COUNT(DISTINCT data_lista_compartilhador) AS Qtd_vezes_presntes_Lista_compartilhador,
+    FROM lista_compartilhador 
+    group by globoid
+
+),
+
+METRICAS_LATEST_DEP AS (
+SELECT B.globoid,
+        --datas consumo maxima
+        MAX (DATE(B.data_consumo)) AS data_consumo_max,
+        --max mais alto entre dependentes
+        ROUND(MAX(B.playtime_dep), 4) as playtime_dep_max,
+        --max mais alto entre dependentes 
+        MAX (B.devices_dep) as devices_dep_max, 
+        --max mais alto entre dependentes 
+        MAX (B.video_start_dep) as video_start_dep_max, 
+        --max mais alto entre dependentes 
+        MAX (B.max_sessoes_sim_dep) as max_sessoes_sim_dep_max,
+        --max mais alto entre dependentes
+        ROUND(MAX(B.soma_minutos_simultaneos_dep), 4) as soma_minutos_simultaneos_dep_max,
+        --max mais alto entre dependentes
+        MAX (B.qtd_cidade_consumo_com_dep) as qtd_cidade_consumo_com_dep_max,
+        --max mais alto entre dependentes
+        MAX (B.flag_cidade_simul_dep) as flag_cidade_simul_dep_max
+        --max mais alto entre dependentes
+        MAX (B.qtd_cidade_consumo_tv_com_dep) as qtd_cidade_consumo_tv_com_dep_max
+       --max mais alto entre dependentes
+        MAX (B.qtd_cidades_simul_dep) as qtd_cidades_simul_dep_max,
+        --max mais alto entre dependentes
+        MAX (B.qtd_videos_repetidos_dep) as qtd_videos_repetidos_dep_max,
+       --max mais alto entre dependentes
+        MAX (B.ips_dep) as ips_dep_max,
+        --max mais alto entre titulares
+        MAX(C.rank_dependente) AS rank_max
+FROM `globoplay-dados.fraude.consumo_antifraude_diario_*` B 
+LEFT JOIN `globoplay-dados.fraude.segmentacao_usuarios_antifraude_v2` C
+ON B.globoid = C.globoid
+GROUP BY B.globoid
+
+),
+
+METRICAS_COM_CONTADORES_DEP AS ( 
+SELECT A.*,
+       B.Qtd_vezes_presntes_ListaReset,
+       C.qtd_vezes_presntes_ListaCancelamento,
+       D.Qtd_vezes_presntes_Lista_compartilhador,
+       E.data_ultima_lista_cancelamento
+FROM METRICAS_LATEST_DEP A
+LEFT JOIN Qtd_vezes_presntes_ListaReset B
+ON A.globoid = B.globoid
+LEFT JOIN Qtd_vezes_presntes_ListaCancelamento C
+ON A.globoid = C.globoid
+LEFT JOIN Qtd_vezes_presntes_Lista_compartilhador D
+ON A.globoid = D.globoid
+LEFT JOIN data_ultima_lista_cancelamento E
+ON A.globoid = E.globoid
+
+)
+
+SELECT * FROM METRICAS_COM_CONTADORES_DEP
+*/
+
+

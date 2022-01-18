@@ -1,0 +1,98 @@
+media_das_metricas_de_consumo AS (
+    SELECT 
+        MIN (DATE(data_consumo)) AS data_consumo_min,
+        MAX (DATE(data_consumo)) AS data_consumo_max,
+        globoid,
+
+        -- ROUND(avg(playtime), 4) as playtime,
+        -- ROUND(avg(max_sessoes_sim), 4) as max_sessoes_sim,
+        -- ROUND(avg(soma_minutos_simultaneos), 4) as soma_minutos_simultaneos,
+        -- ROUND(avg(qtd_cidade_consumo), 4) as qtd_cidade_consumo,
+        -- ROUND(avg(qtd_cidades_simul), 4)as qtd_cidades_simul,
+
+        -- ROUND(avg(playtime_dep), 4) as playtime_dep,
+        -- ROUND(avg(max_sessoes_sim_dep), 4) as max_sessoes_sim_dep,
+        -- ROUND(avg(soma_minutos_simultaneos_dep), 4) as soma_minutos_simultaneos_dep,
+        -- ROUND(avg(qtd_cidade_consumo_com_dep), 4) as qtd_cidade_consumo_com_dep,
+        -- ROUND(avg(qtd_cidades_simul_dep), 4) as qtd_cidades_simul_dep
+
+        if ( ROUND(avg(playtime), 4) < ROUND(avg(playtime_dep), 4),ROUND(avg(playtime_dep), 4), ROUND(avg(playtime), 4)) as playtime,
+        if ( ROUND(avg(max_sessoes_sim), 4) < ROUND(avg(max_sessoes_sim_dep), 4), ROUND(avg(max_sessoes_sim_dep), 4), ROUND(avg(max_sessoes_sim), 4)) as max_sessoes_sim,
+        if ( ROUND(avg(soma_minutos_simultaneos), 4) < ROUND(avg(soma_minutos_simultaneos_dep), 4), ROUND(avg(soma_minutos_simultaneos_dep), 4), ROUND(avg(soma_minutos_simultaneos), 4)) as soma_minutos_simultaneos,
+        if ( ROUND(avg(qtd_cidade_consumo), 4) < ROUND(avg(qtd_cidade_consumo_com_dep), 4), ROUND(avg(qtd_cidade_consumo_com_dep), 4), ROUND(avg(qtd_cidade_consumo), 4)) as qtd_cidade_consumo,
+        if ( ROUND(avg(qtd_cidades_simul), 4) < ROUND(avg(qtd_cidades_simul_dep), 4), ROUND(avg(qtd_cidades_simul_dep), 4), ROUND(avg(qtd_cidades_simul), 4)) as qtd_cidades_simul
+
+    FROM `globoplay-dados.fraude.consumo_antifraude_diario_*`
+        WHERE _TABLE_SUFFIX BETWEEN '20211025' AND FORMAT_DATE('%Y%m%d', DATE_SUB(CURRENT_DATE('America/Sao_Paulo'), INTERVAL 1 DAY))
+    GROUP BY globoid
+),
+
+
+listas_resets AS (
+    SELECT 
+        parse_date('%Y%m%d', _TABLE_SUFFIX) AS data_lista_reset,
+        globoid,
+        Tipo_de_conta
+    FROM `globoplay-dados.fraude.Lista_reset_*`
+),
+
+Qtd_vezes_presntes_ListaReset AS (
+    SELECT globoid,
+        COUNT(DISTINCT data_lista_reset) AS Qtd_vezes_presntes_ListaReset
+    FROM listas_resets 
+    group by globoid
+
+),
+listas_Cancelamento AS (
+    SELECT 
+        parse_date('%Y%m%d', _TABLE_SUFFIX) AS data_lista_cancel,
+        globoid,
+        Tipo_de_conta
+    FROM `globoplay-dados.fraude.Lista_cancelamento_*`
+),
+
+Qtd_vezes_presntes_ListaCancelamento AS (
+    SELECT globoid,
+        COUNT(DISTINCT data_lista_cancel) AS qtd_vezes_presntes_ListaCancelamento
+    FROM listas_Cancelamento 
+    group by globoid
+
+),
+
+Tabela1 AS ( 
+    SELECT 
+        DATE(data_consumo) AS data_consumo,
+        globoid,
+        tipo_conta, 
+        segmento 
+    FROM
+        `globoplay-dados.fraude.segmentacao_usuarios_antifraude_v2`
+    WHERE
+        DATE(data_consumo) BETWEEN DATE('2021-10-25') AND DATE_SUB(CURRENT_DATE('America/Sao_Paulo'), INTERVAL 1 DAY)
+    GROUP BY data_consumo, globoid, tipo_conta, segmento
+),
+
+Tabela2 AS (
+    SELECT 
+        tipo_conta,
+        COUNT(DISTINCT data_consumo) AS qtd_Fraudador
+    FROM Tabela1
+    WHERE segmento = 'Fraudador'  
+        OR segmento = 'Fraudador Titular' 
+        OR segmento = 'Fraudador Dependente' 
+    GROUP BY globoid, tipo_conta
+
+),
+
+Tabela3 AS (
+    SELECT 
+        globoid, 
+        tipo_conta,
+        COUNT(DISTINCT data_consumo) AS qtd_Compartilhador
+    FROM Tabela1
+    WHERE segmento = 'Compartilhador Titular' 
+        OR segmento = 'Compartilhador' 
+        OR segmento = 'Compartilhador Dependente'
+    GROUP BY globoid, tipo_conta
+
+),

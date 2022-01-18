@@ -1,0 +1,11 @@
+bq query \
+--destination_table fraude.Lista_reset_20210817 \
+--replace \
+--use_legacy_sql=false \
+'SELECT
+  globoid
+  ,SAFE_CAST(RANK AS float64 ) AS RANK
+  ,Tipo_de_conta
+FROM
+`globoplay-dados.fraude.Lista_reset_20210817`'
+

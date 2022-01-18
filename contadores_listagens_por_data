@@ -1,0 +1,57 @@
+--contagem cancelados
+
+WITH
+listas_Cancelamento AS (
+    SELECT 
+        parse_date('%Y%m%d', _TABLE_SUFFIX) AS data_lista_cancel,
+        globoid
+    FROM `globoplay-dados.fraude.Lista_cancelamento_*`
+),
+
+Qtd_vezes_presntes_ListaCancelamento AS (
+    SELECT data_lista_cancel,
+        COUNT( globoid) as total_cancelados
+    FROM listas_Cancelamento 
+    group by data_lista_cancel
+
+)
+
+SELECT * FROM Qtd_vezes_presntes_ListaCancelamento
+
+-- contagem reset
+WITH
+listas_reset AS (
+    SELECT 
+        parse_date('%Y%m%d', _TABLE_SUFFIX) AS data_lista_reset,
+        globoid
+    FROM `globoplay-dados.fraude.Lista_reset_*`
+),
+
+Qtd_vezes_presntes_listas_reset AS (
+    SELECT data_lista_reset,
+        COUNT( globoid)  as total_reset
+    FROM listas_reset 
+    group by data_lista_reset
+
+)
+
+SELECT * FROM Qtd_vezes_presntes_listas_reset
+
+--contagem compartilhador
+WITH
+listas_compartilhador AS (
+    SELECT 
+        parse_date('%Y%m%d', _TABLE_SUFFIX) AS data_Lista_compartilhador,
+        globoid
+    FROM `globoplay-dados.fraude.Lista_compartilhadores_*`
+),
+
+Qtd_vezes_presntes_listas_compartilhador  AS (
+    SELECT data_Lista_compartilhador,
+        COUNT( globoid) as total_compartilhador
+    FROM listas_compartilhador 
+    group by data_Lista_compartilhador
+
+)
+
+SELECT * FROM Qtd_vezes_presntes_listas_compartilhador
